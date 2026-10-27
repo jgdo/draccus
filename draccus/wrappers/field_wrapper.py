@@ -17,6 +17,17 @@ from .wrapper import Wrapper
 logger = getLogger(__name__)
 
 
+class _NonCallableTypePlaceholder:
+    def __init__(self, tpe: Any):
+        self.type = tpe
+
+    def __call__(self, value):
+        return value
+
+    def __repr__(self):
+        return repr(self.type)
+
+
 class FieldWrapper(Wrapper[dataclasses.Field]):
     """
     FieldWrapper represents a single "atomic" field of a dataclass. That is, a field
@@ -138,6 +149,10 @@ class FieldWrapper(Wrapper[dataclasses.Field]):
             if not _arg_options.get("help"):
                 _arg_options["help"] = f"Must be one of: {', '.join(str(c) for c in args)}"
         else:
+            if not callable(tpe):
+                # Python 3.14+: argparse requires callable types, and Union types are no longer callable.
+                # The actual conversion is done by draccus, so this is only a placeholder.
+                tpe = _NonCallableTypePlaceholder(tpe)
             _arg_options["type"] = tpe
             try:
                 _arg_options["type"].__name__ = self.type.__repr__().replace("typing.", "")
